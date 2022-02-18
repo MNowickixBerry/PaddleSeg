@@ -203,6 +203,7 @@ def main(args):
 
     if neptune_run != None:
         neptune_run["model/name"] = args.cfg.split('/')[-1]
+        neptune_run['sys/name'] = args.cfg.split('/')[-1]
         neptune_run["params/iters"] = cfg.iters
         neptune_run["params/batch_size"] = cfg.batch_size
         neptune_run["params/losses"] = cfg.loss
