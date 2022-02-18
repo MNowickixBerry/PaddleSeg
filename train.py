@@ -23,6 +23,8 @@ from paddleseg.utils import get_sys_env, logger, config_check
 from paddleseg.core import train
 
 
+import neptune.new as neptune
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Model training')
     # params of training
@@ -115,6 +117,24 @@ def parse_args():
             'profiler is enabled. Refer to the paddleseg/utils/train_profiler.py for details.'
     )
 
+    parser.add_argument(
+        '--neptune', dest='neptune', help='Whether to use neptune', action='store_true')
+    parser.add_argument(
+        '--neptune_project',
+        dest='neptune_project',
+        help=
+        'The neptune project used to store information, e.g., mnowickixberry/SidewalkSeg-Cam',
+        type=str,
+        default='mnowickixberry/SidewalkSeg-Cam')
+    parser.add_argument(
+        '--neptune_api_token',
+        dest='neptune_api_token',
+        help=
+        'The neptune api token used to upload information',
+        type=str,
+        default='')
+
+
     return parser.parse_args()
 
 
@@ -124,6 +144,14 @@ def main(args):
         paddle.seed(args.seed)
         np.random.seed(args.seed)
         random.seed(args.seed)
+
+    neptune_run = None
+    print('\n\nNEPTUNE_RUN : ' + str(args.neptune))
+    if args.neptune:
+        neptune_run = neptune.init(
+            project=args.neptune_project,
+            api_token=args.neptune_api_token,
+        ) 
 
     env_info = get_sys_env()
     info = ['{}: {}'.format(k, v) for k, v in env_info.items()]
@@ -173,6 +201,16 @@ def main(args):
 
     config_check(cfg, train_dataset=train_dataset, val_dataset=val_dataset)
 
+    if neptune_run != None:
+        neptune_run["model/name"] = args.cfg.split('/')[-1]
+        neptune_run["model/type"] = args.cfg.dic['model']['type']
+        neptune_run["model/train_dataset"] = args.cfg.train_dataset
+        neptune_run["model/val_dataset"] = args.cfg.val_dataset
+        neptune_run["params/iters"] = cfg.iters
+        neptune_run["params/batch_size"] = cfg.batch_size
+        neptune_run["params/losses"] = cfg.loss
+        neptune_run["params/fp16"] = args.fp16
+
     train(
         cfg.model,
         train_dataset,
@@ -191,7 +229,8 @@ def main(args):
         test_config=cfg.test_config,
         fp16=args.fp16,
         profiler_options=args.profiler_options,
-        to_static_training=cfg.to_static_training)
+        to_static_training=cfg.to_static_training,
+        neptune_run=neptune_run)
 
 
 if __name__ == '__main__':

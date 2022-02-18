@@ -75,7 +75,8 @@ def train(model,
           test_config=None,
           fp16=False,
           profiler_options=None,
-          to_static_training=False):
+          to_static_training=False,
+          neptune_run=None):
     """
     Launch training.
 
@@ -214,7 +215,9 @@ def train(model,
                 else:
                     optimizer.step()
 
+
             lr = optimizer.get_lr()
+            
 
             # update lr
             if isinstance(optimizer, paddle.distributed.fleet.Fleet):
@@ -249,6 +252,15 @@ def train(model,
                             avg_loss, lr, avg_train_batch_cost,
                             avg_train_reader_cost,
                             batch_cost_averager.get_ips_average(), eta))
+                if neptune_run:
+                    neptune_run["train/epoch"].log((iter - 1) // iters_per_epoch + 1)
+                    neptune_run["train/iter"].log(iter)
+                    neptune_run["train/avg_loss"].log(avg_loss)
+                    neptune_run["train/lr"].log(lr)
+                    neptune_run["train/ips"].log(batch_cost_averager.get_ips_average())
+                    
+
+
                 if use_vdl:
                     log_writer.add_scalar('Train/loss', avg_loss, iter)
                     # Record all losses if there are more than 2 losses.
@@ -308,6 +320,11 @@ def train(model,
                         '[EVAL] The model with the best validation mIoU ({:.4f}) was saved at iter {}.'
                         .format(best_mean_iou, best_model_iter))
 
+                    if neptune_run:
+                        neptune_run["val/mean_iou"].log(mean_iou)
+                        neptune_run["val/acc"].log(acc)
+                    
+
                     if use_vdl:
                         log_writer.add_scalar('Evaluate/mIoU', mean_iou, iter)
                         log_writer.add_scalar('Evaluate/Acc', acc, iter)
@@ -324,3 +341,4 @@ def train(model,
     time.sleep(0.5)
     if use_vdl:
         log_writer.close()
+    neptune_run.stop()
