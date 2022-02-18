@@ -203,9 +203,8 @@ def main(args):
 
     if neptune_run != None:
         neptune_run["model/name"] = args.cfg.split('/')[-1]
-        neptune_run["model/type"] = args.cfg.dic['model']['type']
-        neptune_run["model/train_dataset"] = args.cfg.train_dataset
-        neptune_run["model/val_dataset"] = args.cfg.val_dataset
+        neptune_run["data/train_dataset"] = args.cfg.train_dataset
+        neptune_run["data/val_dataset"] = args.cfg.val_dataset
         neptune_run["params/iters"] = cfg.iters
         neptune_run["params/batch_size"] = cfg.batch_size
         neptune_run["params/losses"] = cfg.loss
